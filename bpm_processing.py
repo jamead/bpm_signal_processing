@@ -74,7 +74,7 @@ def gen_adcdata():
    print("Fake Data Len: %f" % len(t))
    
    #sine = .8 * np.sin(2*np.pi*Frf/h*hIf*t)
-   sine = .4 * np.sin(2*np.pi*Frf*t) + .05 * np.sin(2*np.pi*Fpt*t)
+   sine = .4 * np.sin(2*np.pi*Frf*t) + .01 * np.sin(2*np.pi*Fpt*t)
    cha = 1.001 * sine + np.random.randn(len(t))*0.0001
    chb = sine + np.random.randn(len(t))*0.00001
    chc = sine + np.random.randn(len(t))*0.00001
@@ -185,7 +185,7 @@ def plot_adc(a,b,c,d):
    plt.title('ChD')
    plt.grid()
    ax4.set_ylim(ylim)
-   titlestr = "ADC : Sample Rate 310*40*Frf/1320 = 4.69396GSPS" 
+   titlestr = "ADC : Sample Rate %f" % (Fs/1e6) 
    fig.suptitle(titlestr)
 
 def plot_adcoverlay(rawdata,fignum):
@@ -200,7 +200,7 @@ def plot_adcoverlay(rawdata,fignum):
    print("Hello")
 
 
-   plt.figure(5) 
+   plt.figure(fignum) 
    plt.plot(rawdata[hADC*0:hADC],'b.-') 
    plt.plot(rawdata[hADC*5:hADC*6],'g.-')
    plt.plot(rawdata[hADC*10:hADC*11],'r.-')
@@ -356,7 +356,7 @@ def downconvert(adc):
 
 
    #remove 1st turn due to filter response
-   #tbt = tbt[1:]
+   tbt = tbt[1:]
 
 
    #print(tbt)
@@ -458,7 +458,6 @@ def main():
    print ("Number of Turns: %f" % (len(adca)/float(hADC)))
    
    plot_adc(adca,adcb,adcc,adcd)
-   #plot_adcoverlay(adcb,10)
 
    ya,pa = calc_psd(adca) 
    yb,pb = calc_psd(adcb)
@@ -495,11 +494,13 @@ def main():
 
  
    plt.figure(4)
-   plt.plot(adca[0:310],'b.-')
-   plt.plot(adca[310:620],'r.-')   
-   plt.plot(adca[620:930],'g.-') 
-   plt.figure(5)
-   plt.plot(adca[0:1000],'b.-')
+   plot_adcoverlay(adcb,20)
+
+   #plt.plot(adca[0:310],'b.-')
+   #plt.plot(adca[310:620],'r.-')   
+   #plt.plot(adca[620:930],'g.-') 
+   #plt.figure(5)
+   #plt.plot(adca[0:1000],'b.-')
    
    plt.show()
    input('Press any key to quit...')

@@ -2,7 +2,7 @@ import sys
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import lfilter
+from scipy.signal import lfilter, firwin, freqz
 #import scipy.signal as signal
 
 
@@ -15,7 +15,7 @@ hIf = 80
 Fs = Frf/h*hADC
 Ftbt = Frf/h
 Ts =  1/Fs
-adcFS = 8192.0
+adcFS = 31767.0
 #N = 100000 
 numTurns = 200 
 kx=10e-3
@@ -60,6 +60,7 @@ def read_adcdata(fname):
    #print("ChB mean: %f" % np.mean(chb))
    #print("ChC mean: %f" % np.mean(chc))
    #print("ChD mean: %f" % np.mean(chd))
+   print("Max ADC value: %d" % np.max(cha))
 
    cha = cha / adcFS
    chb = chb / adcFS
@@ -299,7 +300,8 @@ def to_twos_complement(val, bits=16):
     return val #format(val, f'0{bits}b')
 
 
-def fir_filter(input_signal):
+#current filter in FPGA
+def fir_4tap_filter(input_signal):
 
   b = [0.1321, 0.3679, 0.3679, 0.1321]
 
@@ -320,6 +322,54 @@ def fir_filter(input_signal):
   plt.ylabel('Amplitude')
 
   return filt_signal
+
+
+
+def fir_ntap_filter(input_signal):
+
+  # Filter specifications
+  fs = 117.3491e6       # Sample rate (Hz)
+  cutoff = 800e3   # Desired cutoff frequency (Hz)
+  numtaps = 101     # Number of filter coefficients (taps)
+
+  # Design the FIR filter
+  b = firwin(numtaps, cutoff, fs=Fs)
+
+  # Compute the frequency response
+  w, h = freqz(b, worN=8000)
+
+  # Plot the frequency response
+  plt.figure(30)
+  #plt.figure(figsize=(10, 6))
+  plt.plot(w * fs / (2 * np.pi), 20 * np.log10(np.abs(h)), 'b')
+  plt.title('FIR Filter Frequency Response')
+  plt.xlabel('Frequency (Hz)')
+  plt.ylabel('Magnitude (dB)')
+  plt.grid()
+  plt.draw()
+
+  filt_signal = np.zeros_like(input_signal)
+
+  for n in range(len(input_signal)):
+    # Implement the FIR filter difference equation for each time step
+    for k in range(numtaps):
+        if n - k >= 0:  # Ensure we are within the bounds of the signal
+            filt_signal[n] += b[k] * input_signal[n - k]
+
+
+  plt.figure(31)
+  plt.plot(input_signal, label='Input Signal')
+  plt.plot(filt_signal, label='Filtered Output', linestyle='--')
+  plt.legend()
+  plt.title('201-Tap FIR Filter Implementation')
+  plt.xlabel('Time')
+  plt.ylabel('Amplitude')
+  plt.draw()
+
+  return filt_signal
+
+
+
 
 def downconvert(adc):
    numpts = len(adc)
@@ -343,8 +393,11 @@ def downconvert(adc):
 
    #ifilt = lfilter(coeffs,1,iraw)
    #qfilt = lfilter(coeffs,1,qraw)
-   ifilt = fir_filter(iraw)
-   qfilt = fir_filter(qraw)
+   ifilt = fir_ntap_filter(iraw)
+   qfilt = fir_ntap_filter(qraw)
+   #ifilt = fir_ntap_filter(iraw)
+   #qfilt = fir_ntap_filter(qraw)
+
    
    print("Len i: %d   len ifilt: %d" % (len(iraw), len(ifilt)))
    print("Numturns: %d" % (numturns))
